@@ -1,12 +1,11 @@
+import {electoralPaint,electoralDescription,candidateColor,NEUTRAL_COLOR,TIE_COLOR} from './election-colors.mjs';
 import {assetURL} from './assets.mjs';
 import {PollingLayers} from './polling-map.mjs';
 import {CityLayers} from './city-map.mjs';
 import { boundsOf, labelPoint, normalizeStates, separateStates, IBGE_MESH } from './map-data.mjs';
 const el = id => document.getElementById(id);
 const keyOf = p => [p.turn, p.cargo, p.uf, p.municipality || '', p.zone || ''].join('/');
-const percentage = n => Number(n).toLocaleString('pt-BR', { maximumFractionDigits: 2 }) + '%';
-const color = ['case', ['==', ['get', 'known'], 0], '#b9ccab',
-  ['interpolate', ['linear'], ['get', 'percent'], 0, '#e8efd9', 50, '#8dbb72', 100, '#246146']];
+const color = ['get', 'candidateFill'];
 
 async function loadLibrary() {
  const lib=await import(assetURL('../vendor/maplibre-gl.mjs',import.meta.url));
@@ -102,9 +101,7 @@ export class ElectionMap {
     const feature = this.geo?.features.find(f => f.properties.uf === uf);
     const pack = this.results.get(keyOf({ ...this.getState(), uf, municipality: '', zone: '' }));
     return (feature?.properties.name || uf.toUpperCase()) + '\n' +
-      (pack?.data.sections.percent != null
-        ? percentage(pack.data.sections.percent) + ' de seções apuradas\nGeração TSE: ' + (pack.data.generationTime || 'não informada')
-        : 'Sem dados de apuração consultados') + '\nClique para explorar';
+      electoralDescription(pack?.data) + '\nClique para explorar';
   }
   update(state, results) {
     this.results = results;
@@ -115,7 +112,9 @@ export class ElectionMap {
     const cityActive=this.cities?.active;
     const data = this.separated && !cityActive ? this.inset : this.geo;
     for (const feature of data.features) {
-      const value = results.get(keyOf({ ...state, uf: feature.properties.uf, municipality: '', zone: '' }))?.data.sections.percent;
+      const pack=results.get(keyOf({ ...state, uf: feature.properties.uf, municipality: '', zone: '' }));
+      const value=pack?.data.sections.percent;
+      feature.properties.candidateFill=electoralPaint(pack?.data).fill;
       feature.properties.known = value == null ? 0 : 1;
       feature.properties.percent = value == null ? 0 : Math.max(0, Math.min(100, value));
     }
@@ -129,6 +128,17 @@ export class ElectionMap {
       button.setAttribute('aria-pressed', String(uf === state.uf));
     }
     el('map').dataset.separated = String(this.separated);
+    this.renderLegend(state);
+  }
+  renderLegend(state) {
+    const nav=el('map-candidate-legend');nav.replaceChildren();
+    const candidates=new Map();let loaded=0,total=0;
+    const packs=this.cities?.active?this.cities.legendPacks(state):this.geo.features.map(f=>this.results.get(keyOf({...state,uf:f.properties.uf,municipality:'',zone:''})));
+    for(const pack of packs){total++;if(!pack)continue;loaded++;if(pack.data.hidden)continue;for(const c of pack.data.candidates||[])candidates.set(String(c.ballot||c.id||c.name),c);}
+    const add=(label,color)=>{const item=document.createElement('span'),dot=document.createElement('i');dot.style.background=color;dot.setAttribute('aria-hidden','true');item.append(dot,document.createTextNode(label));nav.append(item);};
+    for(const c of candidates.values())add(c.name+' · '+c.party+' · '+c.ballot,candidateColor(c));
+    add('Sem votos / sem consulta',NEUTRAL_COLOR);add('Empate',TIE_COLOR);
+    el('map-color-status').textContent=loaded+' de '+total+' resultados consultados. Cor = candidato na frente; tom mais forte = maior percentual de votos. Cores de identificação do painel. Altura = seções apuradas.';
   }
   async focus(state, municipalities) {
     if (!this.ready) return;

@@ -1,3 +1,4 @@
+import {candidateColor} from './election-colors.mjs';
 import {pollingStore} from './polling-data.mjs';
 import {matchElectoralMunicipality} from './city-data.mjs';
 import {STATES,pad,selection,urlFor} from './tse.mjs';
@@ -7,13 +8,12 @@ const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,
 const qs=new URLSearchParams(location.search);
 let state={turn:qs.get('turn')||'2',cargo:qs.get('cargo')||'1',uf:qs.get('uf')||'br',municipality:qs.get('municipality')||'',zone:qs.get('zone')||''};
 try{state={...state,...selection(state)};}catch{state={turn:'2',cargo:'1',uf:'br',municipality:'',zone:''};}
-let view='panorama',municipalities=[],current=null,currentKey='',epoch=0,busy=false,nextDue=Date.now()+30000,page=0,rows=[],sectionData=[],stateLoading=false,panoramaActive=false,lastPanorama=0,electionMap=null,mapMode='3d';
+let view='panorama',municipalities=[],current=null,currentKey='',epoch=0,busy=false,nextDue=Date.now()+30000,page=0,rows=[],sectionData=[],stateLoading=false,cityLoading=false,panoramaActive=false,lastPanorama=0,electionMap=null,mapMode='3d';
 const results=new Map(),errors=new Map();
 let favorites=[];try{favorites=JSON.parse(localStorage.getItem('radar-voto-favorites')||'[]');if(!Array.isArray(favorites))favorites=[];favorites=favorites.filter(f=>{try{return f&&typeof f.label==='string'&&!!selection(f);}catch{return false;}});}catch{}
 const getKey=p=>[p.turn,p.cargo,p.uf,p.municipality||'',p.zone||''].join('/');
 const label=p=>p.municipality?(municipalities.find(m=>m.code===p.municipality)?.name||p.municipality)+(p.zone?' · Zona '+Number(p.zone):''):p.uf==='br'?'Brasil':STATES.find(s=>s[0]===p.uf)?.[1]||p.uf.toUpperCase();
 const params=p=>new URLSearchParams(Object.fromEntries(['turn','cargo','uf','municipality','zone'].filter(k=>p[k]).map(k=>[k,p[k]])));
-const tone=['#6d9954','#648ab0','#bd9763','#9e81a6','#7fa89b','#b7aa66'];
 function toast(message){$('toast').textContent=message;$('toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('toast').hidden=true,4000);}
 function notice(message,error=false){$('notice').hidden=!message;$('notice').textContent=message;$('notice').classList.toggle('error',error);}
 function status(message,error=false){$('status').innerHTML='<span class="tiny-dot '+(error?'error-dot':'')+'"></span>'+esc(message);}
@@ -31,7 +31,7 @@ function syncFilters(){
  $('result-heading').textContent=$('cargo').selectedOptions[0]?.textContent||'Resultado';
  $('result-location').textContent=label(state)+(state.uf==='br'?' · Inclui votos do exterior':'');
  $('result-scope').textContent=state.zone?'RESULTADO DA ZONA':state.municipality?'RESULTADO MUNICIPAL':state.uf==='br'?'RESULTADO NACIONAL':'RESULTADO DA UF';
- history.replaceState(null,'','?'+params(state));renderFavoriteCount();
+ history.replaceState(null,'','?'+params(state));renderFavoriteCount();syncCityResultsButton();
 }
 function resetResults(){
  for(const id of ['sections-percent','valid-votes','attendance','tse-time','blank-votes','null-votes','abstention'])$(id).textContent='—';
@@ -49,7 +49,7 @@ function renderResult(pack,stale=false){
  const tags={withheld:'DIVULGAÇÃO SUSPENSA',finished:'FINALIZADO',counting:'EM APURAÇÃO',waiting:'AGUARDANDO'};
  $('result-tag').textContent=stale?'ÚLTIMO DADO RECEBIDO':tags[d.phase];$('result-tag').classList.toggle('live',!stale&&d.phase==='counting');
  $('raw-source').href=pack.source;
- $('candidates').innerHTML=d.candidates.length?d.candidates.map((c,i)=>'<article class="candidate"><div class="candidate-row"><div class="candidate-avatar">'+esc(c.name.split(' ').slice(0,2).map(n=>n[0]).join(''))+'</div><div><div class="candidate-name">'+esc(c.name)+(c.elected?'<span class="elected">ELEITO · TSE</span>':'')+'</div><div class="candidate-party">'+esc(c.party)+' · '+esc(c.ballot)+'</div></div><div class="candidate-stats"><strong>'+pct(c.percentage)+'</strong><small>'+fmt(c.votes)+' votos</small></div></div><div class="candidate-bar"><i style="width:'+Math.max(0,Math.min(100,c.percentage||0))+'%;background:'+tone[i%tone.length]+'"></i></div>'+(c.status?'<p class="candidate-note">'+esc(c.status)+'</p>':'')+(c.destination?'<p class="candidate-note">Destinação: '+esc(c.destination)+'</p>':'')+'</article>').join(''):'<div class="empty">Nenhuma candidatura publicada para este recorte.</div>';
+ $('candidates').innerHTML=d.candidates.length?d.candidates.map((c,i)=>'<article class="candidate"><div class="candidate-row"><div class="candidate-avatar">'+esc(c.name.split(' ').slice(0,2).map(n=>n[0]).join(''))+'</div><div><div class="candidate-name">'+esc(c.name)+(c.elected?'<span class="elected">ELEITO · TSE</span>':'')+'</div><div class="candidate-party">'+esc(c.party)+' · '+esc(c.ballot)+'</div></div><div class="candidate-stats"><strong>'+pct(c.percentage)+'</strong><small>'+fmt(c.votes)+' votos</small></div></div><div class="candidate-bar"><i style="width:'+Math.max(0,Math.min(100,c.percentage||0))+'%;background:'+candidateColor(c)+'"></i></div>'+(c.status?'<p class="candidate-note">'+esc(c.status)+'</p>':'')+(c.destination?'<p class="candidate-note">Destinação: '+esc(c.destination)+'</p>':'')+'</article>').join(''):'<div class="empty">Nenhuma candidatura publicada para este recorte.</div>';
  const c=d.candidates;$('gap').textContent=c.length===2&&d.votes.total>0?'Diferença: '+fmt(Math.abs((c[0].votes||0)-(c[1].votes||0)))+' votos':'Percentuais e situação conforme o TSE.';
 }
 async function refreshMain(){
@@ -102,6 +102,27 @@ function renderTable(){
  $('previous').disabled=page===0;$('next').disabled=(page+1)*10>=rows.length;
  document.querySelectorAll('[data-territory]').forEach(b=>b.onclick=()=>{const value=b.dataset.territory;if(state.uf==='br')changeSelection({uf:value,municipality:'',zone:''});else changeSelection({municipality:value,zone:''},{loadCities:false});});
 }
+function syncCityResultsButton(){
+ const button=$('load-city-results');button.hidden=['br','zz'].includes(state.uf);button.disabled=cityLoading||!municipalities.length;
+ if(!cityLoading)button.textContent='Consultar votos das cidades';
+}
+async function loadCityResults(){
+ if(cityLoading||!municipalities.length||['br','zz'].includes(state.uf))return;
+ cityLoading=true;const scope={turn:state.turn,cargo:state.cargo,uf:state.uf},button=$('load-city-results');syncCityResultsButton();
+ const sameScope=()=>scope.turn===state.turn&&scope.cargo===state.cargo&&scope.uf===state.uf;
+ const queue=municipalities.slice();let completed=0,failures=0,blocked=false;
+ async function runner(){while(queue.length&&!blocked&&sameScope()){
+  const city=queue.shift(),p={...scope,municipality:String(city.code).padStart(5,'0'),zone:''},key=getKey(p);
+  try{const pack=await api('result',p);results.set(key,pack);errors.delete(key);}catch(e){errors.set(key,e.message);failures++;if(e.retryAfter>=600||failures>=3)blocked=true;}
+  completed++;button.textContent=completed+' cidades consultadas…';
+  if(sameScope()&&completed%10===0){renderTable();updateMapData();}
+  await new Promise(r=>setTimeout(r,160));
+ }}
+ try{await Promise.all([runner(),runner(),runner()]);}finally{
+  cityLoading=false;syncCityResultsButton();renderTable();updateMapData();
+  if(sameScope())toast(completed+' consultas municipais concluídas'+(failures?' · '+failures+' indisponíveis.':'.'));
+ }
+}
 async function loadStates(){
  if(stateLoading)return;stateLoading=true;panoramaActive=true;lastPanorama=Date.now();const button=$('load-territories');button.disabled=true;button.textContent='Consultando estados…';const turn=state.turn,cargo=state.cargo,myEpoch=epoch;
  const queue=STATES.filter(s=>cargo==='1'||(s[0]!=='zz'&&(cargo!=='8'||s[0]==='df')&&(cargo!=='7'||s[0]!=='df'))).slice();let completed=0,failures=0,blocked=false;
@@ -152,7 +173,7 @@ $('zone').onchange=()=>changeSelection({zone:$('zone').value},{loadCities:false}
 $('clear-city').onclick=()=>changeSelection({municipality:'',zone:''},{loadCities:false});
 $('refresh').onclick=()=>{nextDue=Date.now()+30000;refreshMain();if(view==='secoes'&&state.zone)loadSections();};
 $('favorite').onclick=()=>{const i=favorites.findIndex(f=>getKey(f)===getKey(state));if(i>=0)favorites.splice(i,1);else favorites.push({...state,label:label(state),cargoName:$('cargo').selectedOptions[0].textContent});saveFavorites();toast(i>=0?'Favorito removido.':'Localidade salva nos favoritos.');};
-$('load-sections').onclick=loadSections;$('load-territories').onclick=loadStates;$('export').onclick=exportCSV;
+$('load-city-results').onclick=loadCityResults;$('load-sections').onclick=loadSections;$('load-territories').onclick=loadStates;$('export').onclick=exportCSV;
 $('table-search').oninput=()=>{page=0;renderTable();};$('region').onchange=()=>{page=0;renderTable();};$('previous').onclick=()=>{page--;renderTable();};$('next').onclick=()=>{page++;renderTable();};
 $('share').onclick=async()=>{try{await navigator.clipboard.writeText(location.href);toast('Link deste recorte copiado.');}catch{toast('Copie o endereço da barra do navegador para compartilhar este recorte.');}};
 document.querySelectorAll('[data-map-mode]').forEach(b=>b.onclick=()=>setMapMode(b.dataset.mapMode));

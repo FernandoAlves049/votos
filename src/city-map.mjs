@@ -1,12 +1,10 @@
+import {electoralPaint,electoralDescription} from './election-colors.mjs';
 import { CityMeshStore, matchElectoralMunicipality } from './city-data.mjs';
 import { boundsOf, labelPoint, separateStates, GEOGRAPHIC_STATES } from './map-data.mjs';
 const el=id=>document.getElementById(id);
 const empty=()=>({type:'FeatureCollection',features:[]});
 const keyOf=p=>[p.turn,p.cargo,p.uf,p.municipality||'',p.zone||''].join('/');
-const pct=n=>Number(n).toLocaleString('pt-BR',{maximumFractionDigits:2})+'%';
-const cityColor=['case',['==',['get','selected'],1],'#edc575',
-  ['==',['get','known'],0],'#cad8c2',
-  ['interpolate',['linear'],['get','percent'],0,'#e8efd9',50,'#8dbb72',100,'#246146']];
+const cityColor=['get','candidateFill'];
 
 export class CityLayers {
   constructor(host) {
@@ -100,6 +98,7 @@ export class CityLayers {
       const row=this.links.get(feature.properties.ibge);
       const pack=row?this.results.get(keyOf({...state,municipality:String(row.code).padStart(5,'0'),zone:''})):null;
       const value=pack?.data.sections.percent;
+      feature.properties.candidateFill=electoralPaint(pack?.data).fill;
       feature.properties.known=value==null?0:1;
       feature.properties.percent=value==null?0:Math.max(0,Math.min(100,value));
       feature.properties.selected=feature.properties.ibge===this.selected?1:0;
@@ -113,6 +112,9 @@ export class CityLayers {
     this.status(geo.features.length+' '+(state.uf==='df'?'localidade cartográfica':'municípios')+' em '+stateName+
       ' · passe o mouse para ver o nome e clique para consultar.');
     this.updateMarker();
+  }
+  legendPacks(state) {
+    return this.geo.features.map(f=>{const row=this.links.get(f.properties.ibge);return row?this.results.get(keyOf({...state,municipality:String(row.code).padStart(5,'0'),zone:''})):null;});
   }
   updateMarker() {
     const feature=this.geo?.features.find(f=>f.properties.ibge===this.selected);
@@ -129,8 +131,7 @@ export class CityLayers {
     const state=this.host.getState();
     const pack=row?this.results.get(keyOf({...state,municipality:String(row.code).padStart(5,'0'),zone:''})):null;
     return (feature?.properties.name||id)+'\n'+
-      (pack?.data.sections.percent!=null?pct(pack.data.sections.percent)+' de seções apuradas':
-        'Apuração municipal ainda não consultada')+'\nClique para consultar a cidade';
+      electoralDescription(pack?.data)+'\nClique para consultar a cidade';
   }
   async select(feature) {
     const uf=this.uf;this.selected=feature.properties.ibge;this.paint(this.host.getState());

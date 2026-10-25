@@ -72,3 +72,7 @@ Malha municipal de referência: [Geodata BR](https://github.com/tbrugz/geodata-b
 Na preparação local, execute também node scripts/prepare-cities.mjs e python3 scripts/prepare-polling-places.py antes de npm run build. O importador usa somente a biblioteca padrão do Python 3 e faz leitura do CSV em fluxo, sem carregar o CSV inteiro em memória.
 
 A navegação do mapa segue Brasil → estado → cidade → local de votação. A visão da UF carrega todos os polígonos municipais da malha de referência; o clique aproxima a cidade e o local. Use os atalhos do caminho ou Voltar uma etapa para retornar à cidade, ao estado inteiro ou ao Brasil.
+
+A cor de cada UF ou município acompanha o candidato com mais votos divulgados no recorte atual. O tom fica mais forte com o percentual oficial desse candidato. Empates e ausência de votos recebem tons neutros. A borda indica a seleção; a altura continua representando seções apuradas. A legenda e as barras usam cores estáveis por candidatura, definidas pelo painel (não são cores oficiais do TSE). Os resultados não consultados permanecem neutros.
+
+Use Consultar votos das cidades para carregar os resultados de todos os municípios da UF selecionada. As consultas ocorrem em lotes, com pausa e interrupção se o TSE limitar o acesso. O painel mantém neutros os municípios sem votos ou sem resultado recebido. Use novamente o botão para atualizar o conjunto; o recorte selecionado continua com atualização automática própria.
