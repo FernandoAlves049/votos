@@ -25,3 +25,8 @@ test('malhas por UF têm cache, deduplicação e caminhos relativos sob /votos/'
  assert.equal(url,'https://exemplo.test/votos/data/municipalities/go.geojson');
  await assert.rejects(store.load('../'),/UF/);
 });
+
+test('carregamento municipal preserva o receptor global exigido pelo fetch do navegador',async()=>{
+ const store=new CityMeshStore(function(){assert.equal(this,globalThis);return Promise.resolve(Response.json(raw));},new URL('https://exemplo.test/data/'));
+ await store.load('go');
+});

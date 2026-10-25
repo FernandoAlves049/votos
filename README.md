@@ -70,3 +70,5 @@ O cadastro é importado de [Eleitorado por local de votação — 2026, TSE](htt
 Malha municipal de referência: [Geodata BR](https://github.com/tbrugz/geodata-br), derivada do IBGE, revisão 4938e70 de 10/06/2020, licença CC0. Municípios posteriores à base podem não ter polígono; continuam disponíveis no cadastro eleitoral e no mapa de locais. Os arquivos são publicados por UF e carregados sob demanda. Os catálogos gerados registram origem e cobertura.
 
 Na preparação local, execute também node scripts/prepare-cities.mjs e python3 scripts/prepare-polling-places.py antes de npm run build. O importador usa somente a biblioteca padrão do Python 3 e faz leitura do CSV em fluxo, sem carregar o CSV inteiro em memória.
+
+A navegação do mapa segue Brasil → estado → cidade → local de votação. A visão da UF carrega todos os polígonos municipais da malha de referência; o clique aproxima a cidade e o local. Use os atalhos do caminho ou Voltar uma etapa para retornar à cidade, ao estado inteiro ou ao Brasil.

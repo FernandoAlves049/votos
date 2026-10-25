@@ -33,7 +33,7 @@ export class PollingLayers {
   async sync(state,force=false) {
     const key=[state.turn,state.uf,state.municipality||'',state.zone||'',el('show-polling-places').checked].join('/');
     if(this.key===key&&!force)return;
-    this.key=key;const generation=++this.generation;this.pack=null;this.popup?.remove();
+    this.key=key;const generation=++this.generation;this.pack=null;this.currentPlace=null;this.popup?.remove();
     this.map.getSource('polling-places').setData(empty());
     el('polling-place-detail').hidden=true;el('polling-list').innerHTML='';
     el('polling-search').value='';el('polling-retry').hidden=true;el('map').dataset.pollingPlaces='0';
@@ -65,7 +65,7 @@ export class PollingLayers {
   }
   open(id) {
     const place=this.visiblePlaces().find(p=>p.id===id);if(!place)return;
-    this.currentPlace=place;const panel=el('polling-place-detail');panel.hidden=false;
+    this.currentPlace=place;this.host.renderBreadcrumbs();const panel=el('polling-place-detail');panel.hidden=false;
     panel.innerHTML='<div class="section-eyebrow">LOCAL DE VOTAÇÃO · TSE</div><h3>'+esc(place.name)+'</h3>'+
       '<p>'+esc([place.address,place.district,place.postalCode].filter(Boolean).join(' · '))+'</p>'+
       '<p>Zona '+Number(place.zone)+' · '+place.sections.length+' seções neste local'+(place.status?' · '+esc(place.status):'')+'</p>'+
@@ -84,6 +84,7 @@ export class PollingLayers {
       this.map.easeTo({center:place.coordinates,zoom:Math.max(13,this.map.getZoom()),duration:600});
     }
   }
+  closeSelection(){this.popup?.remove();this.currentPlace=null;el('polling-place-detail').hidden=true;this.host.renderBreadcrumbs();}
   async section(place,number) {
     const generation=this.generation,scope=selection({...this.scope,zone:place.zone,section:number});
     const target=el('polling-section-files');if(!target)return;

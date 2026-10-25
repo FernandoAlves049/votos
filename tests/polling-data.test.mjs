@@ -25,3 +25,8 @@ test('cadastro municipal usa o código do TSE e cache independente por turno',as
  assert.match(urls[0],/\/votos\/data\/polling-places\/2\/go\/94730.json$/);
  await assert.rejects(store.load({...p,municipality:'../'}),/Selecione/);
 });
+
+test('carregamento dos locais preserva o receptor global do fetch no navegador',async()=>{
+ const store=new PollingStore(function(){assert.equal(this,globalThis);return Promise.resolve(Response.json(pack()));},new URL('https://exemplo.test/data/'));
+ await store.load({turn:'2',uf:'go',municipality:'94730'});
+});

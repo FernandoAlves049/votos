@@ -27,6 +27,7 @@ export class ElectionMap {
   constructor({ onSelect, onCitySelect, getState, getMunicipalities, onError }) {
     this.onSelect = onSelect; this.onCitySelect=onCitySelect; this.getState = getState; this.getMunicipalities=getMunicipalities; this.onError = onError;
     this.mode = '3d'; this.separated = true; this.markers = new Map(); this.results = new Map();
+    el('map-back').onclick=()=>this.back();
     el('separate-states').addEventListener('change', e => {
       this.separated = e.target.checked; this.update(this.getState(), this.results);
     });
@@ -110,6 +111,7 @@ export class ElectionMap {
     if (!this.ready) return;
     this.cities?.sync(state,results,this.getMunicipalities());
     this.polling?.sync(state);
+    this.renderBreadcrumbs();
     const cityActive=this.cities?.active;
     const data = this.separated && !cityActive ? this.inset : this.geo;
     for (const feature of data.features) {
@@ -130,6 +132,7 @@ export class ElectionMap {
   }
   async focus(state, municipalities) {
     if (!this.ready) return;
+    if(state.uf==='br'){this.home(false);return;}
     if(this.cities?.focus(state))return;
     if (this.getState().uf !== state.uf) return;
     const feature = this.geo.features.find(f => f.properties.uf === state.uf);
@@ -149,10 +152,41 @@ export class ElectionMap {
       el('map').dataset.mode = mode;
     } catch (error) { this.onError('Perspectiva indisponível neste dispositivo: ' + error.message); }
   }
-  home() {
+  home(resetScope=true) {
     if (!this.ready) return;
+    if(resetScope&&this.getState().uf!=='br'){this.onSelect('br');return;}
     this.map.flyTo({ center: [-53, -14], zoom: this.mode === 'globe' ? 1.9 : 2.7,
       pitch: this.mode === 'flat' ? 0 : 46, bearing: this.mode === 'flat' ? 0 : -10, duration: 700 });
   }
+  renderBreadcrumbs() {
+    const state=this.getState(),nav=el('map-breadcrumbs');nav.replaceChildren();
+    const add=(label,action)=>{
+      if(nav.childNodes.length){const sep=document.createElement('span');sep.textContent='›';sep.setAttribute('aria-hidden','true');nav.append(sep);}
+      const button=document.createElement('button');button.type='button';button.textContent=label;button.className='text-button';
+      if(action)button.onclick=action;else{button.disabled=true;button.setAttribute('aria-current','location');}
+      nav.append(button);
+    };
+    add('Brasil',state.uf!=='br'?()=>this.onSelect('br'):null);
+    if(state.uf!=='br') {
+      const uf=this.geo?.features.find(f=>f.properties.uf===state.uf)?.properties.name||(state.uf==='zz'?'Exterior':state.uf.toUpperCase());
+      add(uf,state.municipality?()=>this.onSelect(state.uf):null);
+    }
+    if(state.municipality){
+      const municipality=this.getMunicipalities().find(m=>String(m.code).padStart(5,'0')===state.municipality);
+      const local=this.polling?.currentPlace;
+      add(municipality?.name||this.polling?.pack?.municipalityName||state.municipality,
+        local?()=>{this.polling.closeSelection();this.focus(this.getState(),this.getMunicipalities());}:null);
+      if(local)add(local.name,null);
+    }
+    el('map-back').disabled=state.uf==='br';
+    el('map-back').textContent=this.polling?.currentPlace?'← Voltar à cidade':state.municipality?'← Voltar ao estado':'← Voltar ao Brasil';
+  }
+  back() {
+    const state=this.getState();
+    if(this.polling?.currentPlace){this.polling.closeSelection();this.focus(state,this.getMunicipalities());}
+    else if(state.municipality)this.onSelect(state.uf);
+    else if(state.uf!=='br')this.onSelect('br');
+  }
+
   resize() { this.map?.resize(); }
 }

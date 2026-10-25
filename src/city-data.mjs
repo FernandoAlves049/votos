@@ -37,7 +37,7 @@ export function matchElectoralMunicipality(feature, registry) {
 
 export class CityMeshStore {
   constructor(fetcher = fetch, base = new URL('../data/municipalities/', import.meta.url)) {
-    this.fetcher = fetcher; this.base = base; this.cache = new Map(); this.pending = new Map();
+    this.fetcher = fetcher.bind(globalThis); this.base = base; this.cache = new Map(); this.pending = new Map();
   }
   async load(uf) {
     if (!GEOGRAPHIC_STATES.some(s => s[0] === uf)) throw new Error('UF sem malha municipal brasileira.');
