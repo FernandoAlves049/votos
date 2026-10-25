@@ -1,3 +1,4 @@
+import {assetURL} from './assets.mjs';
 import { GEOGRAPHIC_STATES, boundsOf } from './map-data.mjs';
 const nameKey = name => String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]/g,'');
 
@@ -43,7 +44,7 @@ export class CityMeshStore {
     if (this.cache.has(uf)) return this.cache.get(uf);
     if (this.pending.has(uf)) return this.pending.get(uf);
     const task = (async () => {
-      const response = await this.fetcher(new URL(uf+'.geojson',this.base).href, {signal:AbortSignal.timeout(25000)});
+      const response = await this.fetcher(assetURL(uf+'.geojson',this.base), {signal:AbortSignal.timeout(25000)});
       if (!response.ok) throw new Error('Não foi possível carregar os municípios desta UF.');
       const data = normalizeCityMesh(await response.json(),uf);
       this.cache.set(uf,data);

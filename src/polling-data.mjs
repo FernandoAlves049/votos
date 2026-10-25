@@ -1,3 +1,4 @@
+import {assetURL} from './assets.mjs';
 export const POLLING_SOURCE='https://cdn.tse.jus.br/estatistica/sead/odsele/eleitorado_locais_votacao/eleitorado_local_votacao_2026.zip';
 export function validatePollingPack(pack,scope) {
   if(!pack?.official||pack.year!==2026||String(pack.turn)!==String(scope.turn)||pack.uf!==scope.uf||
@@ -22,7 +23,7 @@ export class PollingStore {
     if(this.cache.has(key))return this.cache.get(key);
     if(this.pending.has(key))return this.pending.get(key);
     const task=(async()=>{
-      const response=await this.fetcher(new URL(key+'.json',this.base).href,{signal:AbortSignal.timeout(20000)});
+      const response=await this.fetcher(assetURL(key+'.json',this.base),{signal:AbortSignal.timeout(20000)});
       if(!response.ok)throw Error('Cadastro de locais ainda indisponível para esta cidade e turno.');
       const pack=validatePollingPack(await response.json(),index?{turn:scope.turn,uf:scope.uf}:scope);
       if(index?!Array.isArray(pack.municipalities):!Array.isArray(pack.places))throw Error('Cadastro inválido.');

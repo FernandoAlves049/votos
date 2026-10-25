@@ -1,13 +1,19 @@
-import { cp, mkdir, readFile, writeFile } from 'node:fs/promises';
+import {versionModule,versionHTML} from './version-assets.mjs';
+import { cp, mkdir, readFile, writeFile, readdir } from 'node:fs/promises';
 import { normalizeStates } from '../src/map-data.mjs';
 const geo = normalizeStates(JSON.parse(await readFile('data/ufs.geojson', 'utf8')));
 await mkdir('dist', { recursive: true });
 for (const path of ['src', 'data', 'vendor']) await cp(path, 'dist/' + path, { recursive: true });
 await cp('index.html', 'dist/index.html'); await writeFile('dist/.nojekyll', '');
-const html = await readFile('dist/index.html', 'utf8');
+const version=(process.env.GITHUB_SHA||'local').slice(0,12);
+let html = versionHTML(await readFile('dist/index.html','utf8'),version);
+await writeFile('dist/index.html',html);
+for(const file of await readdir('dist/src'))if(/\.(mjs|js)$/.test(file)){
+ const path='dist/src/'+file;await writeFile(path,versionModule(await readFile(path,'utf8'),version));
+}
 if (/__CSS__|__JS__/.test(html)) throw new Error('Marcadores não substituídos.');
 for (const match of html.matchAll(/(?:src|href)="(\.\/[^"]+)"/g)) {
-  if (match[1] !== './') await readFile('dist/' + match[1].slice(2));
+  if (match[1] !== './') await readFile('dist/' + match[1].slice(2).split('?')[0]);
 }
 const app = await readFile('dist/src/app.js', 'utf8');
 if (app.includes("fetch('/api/") || app.includes("from '/core.mjs'")) throw new Error('Caminho incompatível com GitHub Pages.');

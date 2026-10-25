@@ -39,8 +39,10 @@ def build_rows(rows):
             "name":value(row,"NM_LOCAL_VOTACAO") or "Local "+local,
             "address":value(row,"DS_ENDERECO","DS_LOCAL_VOTACAO_ENDERECO","DS_ENDERECO_LOCAL_VOTACAO"),
             "district":value(row,"NM_BAIRRO"),"postalCode":value(row,"NR_CEP"),"zone":zone,
-            "coordinates":None,"sections":set()})
+            "coordinates":None,"sections":set(),"sectionDetails":{},"status":value(row,"DS_SITU_LOCAL_VOTACAO")})
         p["sections"].add(section)
+        principal=numeric_code(value(row,"NR_SECAO_PRINCIPAL"),4)
+        p["sectionDetails"][section]={"number":section,"principal":principal if principal and principal!=section else None,"status":value(row,"DS_SITU_SECAO"),"aggregation":value(row,"DS_TIPO_SECAO_AGREGADA")}
         lat=coordinate(value(row,"NR_LATITUDE","NR_LATITUDE_LOCAL_VOTACAO","LATITUDE"))
         lon=coordinate(value(row,"NR_LONGITUDE","NR_LONGITUDE_LOCAL_VOTACAO","LONGITUDE"))
         valid=lat is not None and lon is not None and -90<=lat<=90
@@ -54,7 +56,7 @@ def build_rows(rows):
 def write_cities(cities,output):
     fetched=datetime.now(timezone.utc).isoformat();catalog={}
     for (turn,uf,city),c in cities.items():
-        places=[{**p,"sections":sorted(p["sections"]),"coordinateSource":"TSE" if p["coordinates"] else None} for p in c["places"].values()]
+        places=[{**p,"sections":sorted(p["sections"]),"sectionDetails":sorted(p["sectionDetails"].values(),key=lambda s:s["number"]),"coordinateSource":"TSE" if p["coordinates"] else None} for p in c["places"].values()]
         places.sort(key=lambda p:(p["name"],p["zone"],p["code"]))
         body={"schema":1,"official":True,"year":2026,"turn":turn,"uf":uf,"municipality":city,
             "municipalityName":c["name"],"generationDate":c["generationDate"],"generationTime":c["generationTime"],
@@ -70,7 +72,7 @@ def write_cities(cities,output):
     metadata={"official":True,"year":2026,"source":SOURCE,"sourcePage":SOURCE_PAGE,"fetchedAt":fetched,
         "cities":len(cities),"places":sum(len(c["places"]) for c in cities.values()),
         "sections":sum(len(p["sections"]) for c in cities.values() for p in c["places"].values()),
-        "turns":sorted(set(k[0] for k in cities))}
+        "plotted":sum(p["coordinates"] is not None for c in cities.values() for p in c["places"].values()),"turns":sorted(set(k[0] for k in cities))}
     (output/"catalog.json").write_text(json.dumps(metadata,ensure_ascii=False,indent=2),encoding="utf-8")
     return metadata
 def main():

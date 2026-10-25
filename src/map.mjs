@@ -1,3 +1,4 @@
+import {assetURL} from './assets.mjs';
 import {PollingLayers} from './polling-map.mjs';
 import {CityLayers} from './city-map.mjs';
 import { boundsOf, labelPoint, normalizeStates, separateStates, IBGE_MESH } from './map-data.mjs';
@@ -8,12 +9,12 @@ const color = ['case', ['==', ['get', 'known'], 0], '#b9ccab',
   ['interpolate', ['linear'], ['get', 'percent'], 0, '#e8efd9', 50, '#8dbb72', 100, '#246146']];
 
 async function loadLibrary() {
- const lib=await import(new URL('../vendor/maplibre-gl.mjs',import.meta.url).href);
- lib.setWorkerUrl(new URL('../vendor/maplibre-gl-worker.mjs',import.meta.url).href);
+ const lib=await import(assetURL('../vendor/maplibre-gl.mjs',import.meta.url));
+ lib.setWorkerUrl(assetURL('../vendor/maplibre-gl-worker.mjs',import.meta.url));
  return lib;
 }
 async function mesh() {
-  for (const url of [new URL('../data/ufs.geojson', import.meta.url).href, IBGE_MESH]) {
+  for (const url of [assetURL('../data/ufs.geojson', import.meta.url), IBGE_MESH]) {
     try {
       const response = await fetch(url, { signal: AbortSignal.timeout(18000) });
       if (response.ok) return normalizeStates(await response.json());

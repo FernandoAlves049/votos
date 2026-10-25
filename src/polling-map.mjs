@@ -36,7 +36,7 @@ export class PollingLayers {
     this.key=key;const generation=++this.generation;this.pack=null;this.popup?.remove();
     this.map.getSource('polling-places').setData(empty());
     el('polling-place-detail').hidden=true;el('polling-list').innerHTML='';
-    el('polling-search').value='';el('polling-retry').hidden=true;
+    el('polling-search').value='';el('polling-retry').hidden=true;el('map').dataset.pollingPlaces='0';
     if(!state.municipality||!el('show-polling-places').checked){
       el('polling-panel').hidden=true;el('polling-status').textContent='Selecione uma cidade para ver os locais de votação e suas seções.';return;
     }
@@ -68,7 +68,7 @@ export class PollingLayers {
     this.currentPlace=place;const panel=el('polling-place-detail');panel.hidden=false;
     panel.innerHTML='<div class="section-eyebrow">LOCAL DE VOTAÇÃO · TSE</div><h3>'+esc(place.name)+'</h3>'+
       '<p>'+esc([place.address,place.district,place.postalCode].filter(Boolean).join(' · '))+'</p>'+
-      '<p>Zona '+Number(place.zone)+' · '+place.sections.length+' seções neste local</p>'+
+      '<p>Zona '+Number(place.zone)+' · '+place.sections.length+' seções neste local'+(place.status?' · '+esc(place.status):'')+'</p>'+
       (!place.coordinates?'<p class="muted">O cadastro não informa uma coordenada válida para marcar este local.</p>':'')+
       '<div class="polling-sections">'+place.sections.map(s=>'<button type="button" class="button small secondary" data-polling-section="'+s+'">Seção '+Number(s)+'</button>').join('')+'</div>'+
       '<div id="polling-section-files" role="status"></div>'+
@@ -91,8 +91,8 @@ export class PollingLayers {
     target.textContent='Consultando arquivos oficiais da seção '+Number(number)+'…';
     const current=()=>generation===this.generation&&request===this.sectionRequest&&this.currentPlace?.id===requestedPlace;
     try{
-      let section;
-      try{const pack=await queryOfficial('sections',scope);section=pack.data.find(s=>s.number===number);}catch{}
+      let section=place.sectionDetails?.find(s=>s.number===number);
+      if(!section)try{const pack=await queryOfficial('sections',scope);section=pack.data.find(s=>s.number===number);}catch{}
       if(!current())return;
       const principal=section?.principal||number;
       const pack=await queryOfficial('aux',{...scope,section:principal});if(!current())return;
