@@ -6,20 +6,9 @@ const color = ['case', ['==', ['get', 'known'], 0], '#b9ccab',
   ['interpolate', ['linear'], ['get', 'percent'], 0, '#e8efd9', 50, '#8dbb72', 100, '#246146']];
 
 async function loadLibrary() {
-  if (window.maplibregl) return window.maplibregl;
-  const sources = [new URL('../vendor/maplibre-gl.js', import.meta.url).href,
-    'https://unpkg.com/maplibre-gl@6.16.0/dist/maplibre-gl.js'];
-  for (const src of sources) {
-    try {
-      await new Promise((resolve, reject) => {
-        const script = document.createElement('script');
-        script.src = src; script.onload = resolve; script.onerror = reject;
-        document.head.append(script);
-      });
-      if (window.maplibregl) return window.maplibregl;
-    } catch {}
-  }
-  throw new Error('Não foi possível carregar o mapa.');
+ const lib=await import(new URL('../vendor/maplibre-gl.mjs',import.meta.url).href);
+ lib.setWorkerUrl(new URL('../vendor/maplibre-gl-worker.mjs',import.meta.url).href);
+ return lib;
 }
 async function mesh() {
   for (const url of [new URL('../data/ufs.geojson', import.meta.url).href, IBGE_MESH]) {

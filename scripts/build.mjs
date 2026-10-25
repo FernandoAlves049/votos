@@ -12,3 +12,5 @@ for (const match of html.matchAll(/(?:src|href)="(\.\/[^"]+)"/g)) {
 const app = await readFile('dist/src/app.js', 'utf8');
 if (app.includes("fetch('/api/") || app.includes("from '/core.mjs'")) throw new Error('Caminho incompatível com GitHub Pages.');
 console.log('Site estático gerado em dist com ' + geo.features.length + ' UFs e caminhos relativos.');
+
+for (const name of ['maplibre-gl.mjs','maplibre-gl-worker.mjs','maplibre-gl.css']) await readFile('dist/vendor/'+name);

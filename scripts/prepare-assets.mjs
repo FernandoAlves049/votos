@@ -42,7 +42,7 @@ if (!bundled) await writeFile('data/provenance.json', JSON.stringify({
   source: IBGE_MESH, retrievedAt: new Date().toISOString(), units: 27,
   license: 'Dados geográficos públicos do IBGE; malha simplificada para visualização.'
 }, null, 2));
-for (const name of ['maplibre-gl.js', 'maplibre-gl.css']) {
+for (const name of ['maplibre-gl.mjs', 'maplibre-gl-worker.mjs', 'maplibre-gl.css']) {
   let text;
   try { text = await download('https://unpkg.com/maplibre-gl@6.16.0/dist/' + name); }
   catch { text = await download('https://cdn.jsdelivr.net/npm/maplibre-gl@6.16.0/dist/' + name); }
