@@ -1,0 +1,9 @@
+{
+  "source": "https://github.com/codeforgermany/click_that_hood/blob/fb1c363b3624a256d42f00788fca96d9faf43a45/public/data/brazil-states.geojson",
+  "metadata": "https://github.com/codeforgermany/click_that_hood/blob/main/public/data/brazil-states.metadata.json",
+  "originalProvider": "CodeGeo",
+  "retrievedAt": "2026-10-25",
+  "units": 27,
+  "cartographicSimplificationDegrees": 0.018,
+  "warning": "Malha cartográfica de referência, distribuída em 2015; não substitui malha oficial atualizada. Resultados eleitorais são consultados no TSE."
+}

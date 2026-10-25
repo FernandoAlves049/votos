@@ -35,3 +35,15 @@ test('ilhas em MultiPolygon são preservadas e o rótulo fica na área principal
   const point=labelPoint(geo.features[0]);
   assert.ok(point[0]>=-60 && point[0]<=-59 && point[1]>=-20 && point[1]<=-19);
 });
+
+test('malha publicada contém todas as UFs e anéis fechados utilizáveis pelo mapa 3D', async () => {
+ const {readFile}=await import('node:fs/promises');
+ const geo=normalizeStates(JSON.parse(await readFile(new URL('../data/ufs.geojson',import.meta.url),'utf8')));
+ assert.equal(geo.features.length,27);
+ for(const f of geo.features){
+  const p=labelPoint(f); assert.ok(p.every(Number.isFinite));
+  const polygons=f.geometry.type==='Polygon'?[f.geometry.coordinates]:f.geometry.coordinates;
+  for(const polygon of polygons)for(const ring of polygon){assert.ok(ring.length>=4);assert.deepEqual(ring[0],ring.at(-1));}
+ }
+ assert.equal(separateStates(geo).features.length,27);
+});

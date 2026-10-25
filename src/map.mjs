@@ -50,7 +50,7 @@ export class ElectionMap {
           { id: 'background', type: 'background', paint: { 'background-color': '#eff3e8' } }
         ] },
         center: [-53, -14], zoom: 2.7, pitch: 46, bearing: -10, maxPitch: 70,
-        attributionControl: { customAttribution: 'Limites territoriais: IBGE' }
+        attributionControl: { customAttribution: 'Malha: CodeGeo / Click That Hood · Códigos: IBGE' }
       });
       this.map.addControl(new lib.NavigationControl({ visualizePitch: true }), 'top-right');
       this.map.addControl(new lib.FullscreenControl(), 'top-right');

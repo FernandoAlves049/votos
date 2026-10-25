@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { normalizeStates, IBGE_MESH, GEOGRAPHIC_STATES } from '../src/map-data.mjs';
 async function download(url, type = 'text') {
   let lastError;
@@ -15,7 +15,10 @@ async function download(url, type = 'text') {
   throw lastError;
 }
 await mkdir('data', { recursive: true }); await mkdir('vendor', { recursive: true });
-let geo;
+let geo, bundled = false;
+try { geo = normalizeStates(JSON.parse(await readFile('data/ufs.geojson','utf8'))); bundled = true; }
+catch(error) { if(error.code !== 'ENOENT') throw error; }
+if (!bundled) {
 try { geo = normalizeStates(await download(IBGE_MESH, 'json')); }
 catch {
   console.log('Consultando a malha individual de cada UF no IBGE.');
@@ -33,8 +36,9 @@ catch {
   await Promise.all([runner(), runner(), runner()]);
   geo = normalizeStates({ type: 'FeatureCollection', features });
 }
+}
 await writeFile('data/ufs.geojson', JSON.stringify(geo));
-await writeFile('data/provenance.json', JSON.stringify({
+if (!bundled) await writeFile('data/provenance.json', JSON.stringify({
   source: IBGE_MESH, retrievedAt: new Date().toISOString(), units: 27,
   license: 'Dados geográficos públicos do IBGE; malha simplificada para visualização.'
 }, null, 2));
@@ -46,4 +50,4 @@ for (const name of ['maplibre-gl.js', 'maplibre-gl.css']) {
   await writeFile('vendor/' + name, text);
 }
 await writeFile('vendor/LICENSE-MapLibre.txt', await download('https://raw.githubusercontent.com/maplibre/maplibre-gl-js/v6.16.0/LICENSE.txt'));
-console.log('27 UFs do IBGE e MapLibre 6.16.0 preparados.');
+console.log('27 UFs validadas e MapLibre 6.16.0 preparados.');

@@ -19,7 +19,7 @@ jobs:
           node-version: '22'
       - name: Testar integração, mapa e caminhos
         run: npm test
-      - name: Preparar malha oficial das UFs e biblioteca de mapa
+      - name: Validar malha incluída e preparar biblioteca de mapa
         run: npm run prepare:assets
       - name: Gerar e validar arquivos estáticos
         run: npm run build

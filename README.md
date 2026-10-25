@@ -6,7 +6,7 @@ Painel independente que consulta os arquivos oficiais do TSE para acompanhar a a
 
 ## Mapa
 
-- 26 estados e Distrito Federal como polígonos individuais do IBGE.
+- 26 estados e Distrito Federal como polígonos individuais, identificados pelos códigos das UFs do IBGE.
 - Contornos, siglas clicáveis e destaque para a UF selecionada.
 - Opção **Separar estados**, com redução visual de 2,5% em cada polígono; desative para ver a malha contínua.
 - Perspectivas 2D, 3D e globo. No 3D, altura e cor representam o percentual de seções totalizadas.
@@ -25,7 +25,7 @@ Resultados parciais não são projeções. A indicação de eleito depende da in
 
 ## Publicação e desenvolvimento
 
-O workflow em [.github/workflows/pages.yml](.github/workflows/pages.yml) testa, baixa e valida a malha oficial das **27 UFs**, inclui o MapLibre 6.16.0 e publica no GitHub Pages. A fonte nas configurações de Pages deve ser **GitHub Actions**.
+O workflow em [.github/workflows/pages.yml](.github/workflows/pages.yml) testa e valida a malha incluída das **27 UFs**, inclui o MapLibre 6.16.0 e publica no GitHub Pages. A fonte nas configurações de Pages deve ser **GitHub Actions**.
 
 Com Node.js 22 ou superior, sem instalar dependências:
 
@@ -55,4 +55,6 @@ Favoritos são salvos somente no navegador.
 - [MapLibre GL JS](https://github.com/maplibre/maplibre-gl-js)
 - [GitHub Pages e workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages)
 
-A licença do MapLibre acompanha a distribuição em vendor/LICENSE-MapLibre.txt. As malhas simplificadas do IBGE destinam-se à visualização e não substituem a cartografia oficial em escala original.
+A malha incluída é uma base de referência do CodeGeo, distribuída pelo projeto [Click That Hood](https://github.com/codeforgermany/click_that_hood/blob/main/public/data/brazil-states.metadata.json), com origem, versão e simplificação registradas em data/provenance.json. Ela foi publicada em 2015 e não substitui limites oficiais atuais. Os resultados eleitorais continuam vindo somente do TSE. A cópia cartográfica elimina a dependência do serviço do IBGE durante a publicação.
+
+As licenças acompanham a distribuição em data/LICENSE-ClickThatHood.txt e vendor/LICENSE-MapLibre.txt.
