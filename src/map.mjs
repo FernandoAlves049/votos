@@ -1,3 +1,5 @@
+import {PollingLayers} from './polling-map.mjs';
+import {CityLayers} from './city-map.mjs';
 import { boundsOf, labelPoint, normalizeStates, separateStates, IBGE_MESH } from './map-data.mjs';
 const el = id => document.getElementById(id);
 const keyOf = p => [p.turn, p.cargo, p.uf, p.municipality || '', p.zone || ''].join('/');
@@ -21,8 +23,8 @@ async function mesh() {
 }
 
 export class ElectionMap {
-  constructor({ onSelect, getState, onError }) {
-    this.onSelect = onSelect; this.getState = getState; this.onError = onError;
+  constructor({ onSelect, onCitySelect, getState, getMunicipalities, onError }) {
+    this.onSelect = onSelect; this.onCitySelect=onCitySelect; this.getState = getState; this.getMunicipalities=getMunicipalities; this.onError = onError;
     this.mode = '3d'; this.separated = true; this.markers = new Map(); this.results = new Map();
     el('separate-states').addEventListener('change', e => {
       this.separated = e.target.checked; this.update(this.getState(), this.results);
@@ -59,6 +61,8 @@ export class ElectionMap {
         const popup = new lib.Popup({ closeButton: false, closeOnClick: false });
         for (const layer of ['uf-fill', 'uf-3d']) {
           this.map.on('click', layer, event => {
+            const upper=['municipality-fill','polling-points','polling-clusters'].filter(id=>this.map.getLayer(id));
+            if(upper.length&&this.map.queryRenderedFeatures(event.point,{layers:upper}).length)return;
             const uf = event.features?.[0]?.properties?.uf; if (uf) this.onSelect(uf);
           });
           this.map.on('mousemove', layer, event => {
@@ -77,6 +81,8 @@ export class ElectionMap {
           const marker = new lib.Marker({ element: button, anchor: 'center' }).setLngLat(labelPoint(feature)).addTo(this.map);
           this.markers.set(uf, { marker, button });
         }
+        this.cities=new CityLayers(this);this.cities.init();
+        this.polling=new PollingLayers(this);this.polling.init();
         this.ready = true; el('map-message').hidden = true;
         el('map').dataset.states = '27'; el('map').dataset.ready = 'true';
         this.update(this.getState(), this.results); this.setMode(this.mode);
@@ -101,15 +107,20 @@ export class ElectionMap {
   update(state, results) {
     this.results = results;
     if (!this.ready) return;
-    const data = this.separated ? this.inset : this.geo;
+    this.cities?.sync(state,results,this.getMunicipalities());
+    this.polling?.sync(state);
+    const cityActive=this.cities?.active;
+    const data = this.separated && !cityActive ? this.inset : this.geo;
     for (const feature of data.features) {
       const value = results.get(keyOf({ ...state, uf: feature.properties.uf, municipality: '', zone: '' }))?.data.sections.percent;
       feature.properties.known = value == null ? 0 : 1;
       feature.properties.percent = value == null ? 0 : Math.max(0, Math.min(100, value));
     }
     this.map.getSource('ufs').setData(data);
+    for(const id of ['uf-fill','uf-3d'])this.map.setFilter(id,cityActive?['!=',['get','uf'],state.uf]:null);
     this.map.setFilter('uf-selected', ['==', ['get', 'uf'], state.uf]);
     for (const [uf, { button }] of this.markers) {
+      button.style.display=cityActive&&uf===state.uf?'none':'';
       button.classList.toggle('selected', uf === state.uf);
       button.title = this.description(uf);
       button.setAttribute('aria-pressed', String(uf === state.uf));
@@ -118,31 +129,7 @@ export class ElectionMap {
   }
   async focus(state, municipalities) {
     if (!this.ready) return;
-    const citySource = this.map.getSource('city');
-    if (citySource) citySource.setData({ type: 'FeatureCollection', features: [] });
-    if (state.municipality) {
-      const municipality = municipalities.find(m => m.code === state.municipality);
-      if (municipality?.ibge) {
-        try {
-          const response = await fetch('https://servicodados.ibge.gov.br/api/v3/malhas/municipios/' +
-            municipality.ibge + '?formato=application%2Fvnd.geo%2Bjson&qualidade=minima',
-            { signal: AbortSignal.timeout(12000) });
-          if (response.ok) {
-            const geo = await response.json();
-            if (geo.features?.[0] && this.getState().municipality === municipality.code) {
-              if (citySource) citySource.setData(geo);
-              else {
-                this.map.addSource('city', { type: 'geojson', data: geo });
-                this.map.addLayer({ id: 'city-border', type: 'line', source: 'city',
-                  paint: { 'line-color': '#c67d21', 'line-width': 3 } });
-              }
-              this.map.fitBounds(boundsOf(geo.features[0]), { padding: 45, pitch: this.mode === 'flat' ? 0 : 45, duration: 700, maxZoom: 11 });
-              return;
-            }
-          }
-        } catch {}
-      }
-    }
+    if(this.cities?.focus(state))return;
     if (this.getState().uf !== state.uf) return;
     const feature = this.geo.features.find(f => f.properties.uf === state.uf);
     if (feature) this.map.fitBounds(boundsOf(feature), { padding: 50, pitch: this.mode === 'flat' ? 0 : 46, duration: 700, maxZoom: 7 });
@@ -157,6 +144,7 @@ export class ElectionMap {
       this.map.easeTo({ pitch: mode === 'flat' ? 0 : mode === 'globe' ? 15 : 46,
         bearing: mode === 'flat' ? 0 : -10, duration: 600 });
       if (mode === 'globe') this.map.flyTo({ center: [-53, -14], zoom: 1.9, pitch: 15, duration: 700 });
+      this.cities?.setMode(mode);
       el('map').dataset.mode = mode;
     } catch (error) { this.onError('Perspectiva indisponível neste dispositivo: ' + error.message); }
   }

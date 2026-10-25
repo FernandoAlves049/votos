@@ -58,3 +58,15 @@ Favoritos são salvos somente no navegador.
 A malha incluída é uma base de referência do CodeGeo, distribuída pelo projeto [Click That Hood](https://github.com/codeforgermany/click_that_hood/blob/main/public/data/brazil-states.metadata.json), com origem, versão e simplificação registradas em data/provenance.json. Ela foi publicada em 2015 e não substitui limites oficiais atuais. Os resultados eleitorais continuam vindo somente do TSE. A cópia cartográfica elimina a dependência do serviço do IBGE durante a publicação.
 
 As licenças acompanham a distribuição em data/LICENSE-ClickThatHood.txt e vendor/LICENSE-MapLibre.txt.
+
+## Cidades, locais de votação e seções
+
+Selecione uma UF para ver os limites das cidades. As opções Mostrar cidades e Separar cidades controlam a malha municipal. Ao clicar em uma cidade, o painel cruza seu código IBGE com o cadastro eleitoral do TSE. Códigos IBGE e TSE permanecem separados.
+
+Com uma cidade selecionada, os pontos azuis mostram locais de votação; pontos próximos são agrupados. Clique no ponto ou na lista para ver nome, endereço, zona e seções. Clique em uma seção para consultar seus arquivos oficiais e eventuais agregações. Seções do mesmo local compartilham a coordenada do prédio. Locais sem coordenada válida permanecem na lista, sem marcador inventado.
+
+O cadastro é importado de [Eleitorado por local de votação — 2026, TSE](https://dadosabertos.tse.jus.br/dataset/eleitorado-2026/resource/300626b4-2b24-4d2e-b4fc-46b569cfffe5). Turnos são mantidos em arquivos distintos. A data de geração do cadastro aparece na tela e não é a data da apuração ao vivo. O cadastro publicado reflete o momento da importação; a confirmação pessoal de onde votar deve ser feita no TSE ou e-Título.
+
+Malha municipal de referência: [Geodata BR](https://github.com/tbrugz/geodata-br), derivada do IBGE, revisão 4938e70 de 10/06/2020, licença CC0. Municípios posteriores à base podem não ter polígono; continuam disponíveis no cadastro eleitoral e no mapa de locais. Os arquivos são publicados por UF e carregados sob demanda. Os catálogos gerados registram origem e cobertura.
+
+Na preparação local, execute também node scripts/prepare-cities.mjs e python3 scripts/prepare-polling-places.py antes de npm run build. O importador usa somente a biblioteca padrão do Python 3 e faz leitura do CSV em fluxo, sem carregar o CSV inteiro em memória.

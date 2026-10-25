@@ -1,3 +1,5 @@
+import {pollingStore} from './polling-data.mjs';
+import {matchElectoralMunicipality} from './city-data.mjs';
 import {STATES,pad,selection,urlFor} from './tse.mjs';
 import {queryOfficial} from './client.mjs';
 import {ElectionMap} from './map.mjs';
@@ -67,8 +69,8 @@ async function refreshMain(){
 async function loadMunicipalities(){
  const myEpoch=epoch,p={...state};municipalities=[];$('city-options').innerHTML='';if(p.uf==='br')return;
  $('city-search').placeholder='Carregando municípios…';
- try{const pack=await api('municipalities',p);if(myEpoch!==epoch)return;municipalities=pack.data;$('city-options').innerHTML=municipalities.map(m=>'<option value="'+esc(m.name)+'"></option>').join('');syncFilters();}
- catch(e){if(myEpoch===epoch){$('city-search').placeholder='Cadastro indisponível';toast('Não foi possível carregar os municípios: '+e.message);}}
+ try{const pack=await api('municipalities',p);if(myEpoch!==epoch)return;municipalities=pack.data;updateMapData();$('city-options').innerHTML=municipalities.map(m=>'<option value="'+esc(m.name)+'"></option>').join('');syncFilters();}
+ catch(e){if(myEpoch===epoch){try{const pack=await pollingStore.load(p,true);if(myEpoch!==epoch)return;municipalities=pack.municipalities;$('city-options').innerHTML=municipalities.map(m=>'<option value="'+esc(m.name)+'"></option>').join('');syncFilters();renderTable();updateMapData();}catch{$('city-search').placeholder='Cadastro indisponível';toast('Não foi possível carregar os municípios: '+e.message);}}}
 }
 async function changeSelection(patch,{loadCities=true}={}){
  state={...state,...patch};epoch++;nextDue=Date.now()+30000;page=0;sectionData=[];$('section-list').innerHTML='';$('section-detail').innerHTML='';
@@ -134,7 +136,7 @@ function exportCSV(){
  const cell=x=>{let s=String(x??'');if(/^[=+\-@]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
  const csv='\ufeff'+[header,...data].map(r=>r.map(cell).join(';')).join('\r\n'),url=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'})),a=document.createElement('a');a.href=url;a.download='radar-voto-2026-turno-'+state.turn+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast(data.length+' candidaturas exportadas com suas fontes.');
 }
-function initMap(){electionMap=new ElectionMap({getState:()=>state,onSelect:uf=>{let cargo=state.cargo;if(cargo==='8'&&uf!=='df')cargo='7';if(cargo==='7'&&uf==='df')cargo='8';changeSelection({uf,cargo,municipality:'',zone:''});},onError:toast});electionMap.init();}
+function initMap(){electionMap=new ElectionMap({getState:()=>state,getMunicipalities:()=>municipalities,onCitySelect:async feature=>{const uf=state.uf;let row=matchElectoralMunicipality(feature,municipalities);if(!row){await loadMunicipalities();if(state.uf!==uf)return false;row=matchElectoralMunicipality(feature,municipalities);}if(!row)return false;await changeSelection({municipality:String(row.code).padStart(5,'0'),zone:''},{loadCities:false});return true;},onSelect:uf=>{let cargo=state.cargo;if(['br','zz'].includes(uf))cargo='1';if(cargo==='8'&&uf!=='df')cargo='7';if(cargo==='7'&&uf==='df')cargo='8';changeSelection({uf,cargo,municipality:'',zone:''});},onError:toast});electionMap.init();}
 function updateMapData(){electionMap?.update(state,results);}
 function focusMap(){return electionMap?.focus(state,municipalities);}
 function setMapMode(mode){mapMode=mode;electionMap?.setMode(mode);}
@@ -157,4 +159,4 @@ document.querySelectorAll('[data-map-mode]').forEach(b=>b.onclick=()=>setMapMode
 $('map-home').onclick=()=>electionMap?.home();
 setInterval(()=>{$('clock').textContent=new Date().toLocaleTimeString('pt-BR',{timeZone:'America/Sao_Paulo'})+' · Brasília';if(!$('auto').checked||document.hidden){$('countdown').textContent='pausada';return;}const left=Math.max(0,Math.ceil((nextDue-Date.now())/1000));$('countdown').textContent=left+' s';if(left===0&&!busy&&!['fontes','favoritos'].includes(view)){nextDue=Date.now()+30000;refreshMain();if(panoramaActive&&Date.now()-lastPanorama>60000)loadStates();}},1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&$('auto').checked&&Date.now()>nextDue){nextDue=Date.now()+30000;refreshMain();}});
-syncFilters();renderTable();refreshMain().then(()=>{if(current)loadStates();});loadMunicipalities().then(()=>{syncFilters();renderTable();});initMap();
+syncFilters();renderTable();refreshMain().then(()=>{if(current)loadStates();});loadMunicipalities().then(()=>{syncFilters();renderTable();updateMapData();focusMap();});initMap();

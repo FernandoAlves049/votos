@@ -11,7 +11,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v6
       - uses: actions/setup-node@v6
@@ -19,6 +19,12 @@ jobs:
           node-version: '22'
       - name: Testar integração, mapa e caminhos
         run: npm test
+      - name: Testar importador dos locais do TSE
+        run: python3 -m unittest discover -s tests -p 'test_*.py'
+      - name: Preparar limites municipais por UF
+        run: node scripts/prepare-cities.mjs
+      - name: Importar locais e seções oficiais do TSE
+        run: python3 scripts/prepare-polling-places.py
       - name: Validar malha incluída e preparar biblioteca de mapa
         run: npm run prepare:assets
       - name: Gerar e validar arquivos estáticos

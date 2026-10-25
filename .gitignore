@@ -1,3 +1,7 @@
 dist/
 vendor/
 node_modules/
+.cache/
+data/municipalities/
+data/polling-places/
+__pycache__/
